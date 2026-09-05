@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helpers
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return request.auth.uid == userId; }
+    function isValidId(id) { return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    function isValidInteraction(data) {
+      return data.keys().hasAll(['prompt', 'response', 'ownerId', 'createdAt']) &&
+             data.keys().size() == 4 &&
+             data.prompt is string && data.prompt.size() <= 5000 &&
+             data.response is string && data.response.size() <= 30000 &&
+             data.ownerId is string && data.ownerId == request.auth.uid &&
+             data.createdAt == request.time;
+    }
+
+    // Interaction Collection
+    match /users/{userId}/interactions/{interactionId} {
+      // List/Get allowed if user is authenticated and queries their own path
+      allow read: if isSignedIn() && isOwner(userId);
+      
+      // Create allowed if payloads are strict and ownership matches
+      allow create: if isSignedIn() && isOwner(userId) &&
+                       isValidId(userId) && isValidId(interactionId) &&
+                       isValidInteraction(incoming());
+      
+      // Interactions are immutable logs, no updates or deletes
+      allow update, delete: if false;
+    }
+  }
+}

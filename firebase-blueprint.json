@@ -1,0 +1,22 @@
+{
+  "entities": {
+    "Interaction": {
+      "title": "Interaction",
+      "description": "An AI career planning interaction",
+      "type": "object",
+      "properties": {
+        "prompt": { "type": "string", "maxLength": 5000 },
+        "response": { "type": "string", "maxLength": 20000 },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["prompt", "response", "ownerId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/interactions/{interactionId}": {
+      "schema": "Interaction",
+      "description": "User career path interactions"
+    }
+  }
+}
